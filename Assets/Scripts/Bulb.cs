@@ -7,7 +7,7 @@ public class Bulb : MonoBehaviour
     const float bulbRange = 0.02f;
     public const float fadeTime = 0.5f;
 
-    static readonly Dictionary<LightColors, Color> colorLookup = new Dictionary<LightColors, Color>()
+    private static readonly Dictionary<LightColors, Color> colorLookup = new Dictionary<LightColors, Color>()
     {
         { LightColors.Red, Color.red },
         { LightColors.Green, Color.green },
@@ -23,6 +23,18 @@ public class Bulb : MonoBehaviour
     private LightColors _color;
     private bool _lit;
     public bool animating { get; private set; }
+    private float? _scalar = null;
+
+    public float scalar
+    {
+        get { return _scalar.Value; }
+        set
+        {
+            _scalar = value;
+            _light.range *= value;
+        }
+    }
+
     public bool lightState 
     {
         get { return _light.enabled; }
@@ -33,6 +45,7 @@ public class Bulb : MonoBehaviour
     {
         _light = GetComponentInChildren<Light>();
     }
+
     public LightColors color
     {
         get { return _color; }
@@ -49,6 +62,8 @@ public class Bulb : MonoBehaviour
         }
     }
 
+
+
     IEnumerator FadeOut()
     {
         if (!_lit)
@@ -59,7 +74,7 @@ public class Bulb : MonoBehaviour
         {
             yield return null;
             delta += Time.deltaTime / fadeTime;
-            _light.range = Mathf.Lerp(bulbRange, 0, delta);
+            _light.range = Mathf.Lerp(_scalar.Value * bulbRange, 0, delta);
         }
         _light.enabled = false;
         animating = false;
@@ -74,7 +89,7 @@ public class Bulb : MonoBehaviour
         {
             yield return null;
             delta += Time.deltaTime / fadeTime;
-            _light.range = Mathf.Lerp(0, bulbRange, delta);
+            _light.range = Mathf.Lerp(0, _scalar.Value * bulbRange, delta);
         }
         animating = false;
     }

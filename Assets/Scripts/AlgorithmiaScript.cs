@@ -14,10 +14,12 @@ public class AlgorithmiaScript : MonoBehaviour
     public KMBombInfo Bomb;
     public KMAudio Audio;
     public KMBombModule Module;
+    public KMColorblindMode Colorblind;
 
     public TextMesh[] texts;
     public KMSelectable[] dirButtons;
     public Bulb[] bulbs;
+    public TextMesh cbText;
 
     static int moduleIdCounter = 1;
     int moduleId;
@@ -32,6 +34,8 @@ public class AlgorithmiaScript : MonoBehaviour
     private string[] generatedPaths;
     private MazeGenerator gen;
     int prevSoundIx = -1;
+    private bool cbON;
+
     void Awake()
     {
         moduleId = moduleIdCounter++;
@@ -48,7 +52,10 @@ public class AlgorithmiaScript : MonoBehaviour
         mazeAlg = (LightColors)Rnd.Range(0, 6);
         SetUpSeed();
         GenerateMaze();
+        GetPositions();
         SetUpLights();
+        if (Colorblind.ColorblindModeActive)
+            ToggleCB();
     }
     void SetUpSeed()
     {
@@ -58,7 +65,7 @@ public class AlgorithmiaScript : MonoBehaviour
             texts[i].text = textNums[i];
         Log("The module's seed is {0}", seed.GetStrings().Join());
     }
-    void SetUpLights()
+    void GetPositions()
     {
         goalPos = Rnd.Range(0, 16);
         do currentPos = Rnd.Range(0, 16);
@@ -66,10 +73,15 @@ public class AlgorithmiaScript : MonoBehaviour
 
         Log("The starting position is at {0}.", Data.coords[currentPos]);
         Log("The goal position is at {0}.", Data.coords[goalPos]);
-
+    }
+    void SetUpLights()
+    {
         bulbs[currentPos].color = LightColors.White;
         bulbs[goalPos].color = mazeAlg;
+        cbText.text = mazeAlg.ToString().Substring(0, 1);
 
+        for (int i = 0; i < 16; i++)
+            bulbs[i].scalar = transform.lossyScale.x;
     }
     void GenerateMaze()
     {
@@ -121,7 +133,7 @@ public class AlgorithmiaScript : MonoBehaviour
             texts[ix].fontStyle = FontStyle.Normal;
             texts[ix].color = new Color32(0x00, 0xFF, 0x45, 0xFF);
         }
-        StartCoroutine(Scroll((ix + 1) % 10));
+        StartCoroutine(Scroll((ix + 1) % 10 ));
         float delta = 0;
         while (delta < 1)
         {
@@ -238,6 +250,11 @@ public class AlgorithmiaScript : MonoBehaviour
         for (int i = 0; i < 16; i++)
             bulbs[i].lightState = !bulbs[i].lightState;
     }
+    void ToggleCB()
+    {
+        cbON = !cbON;
+        cbText.gameObject.SetActive(cbON);
+    }
 
     class Movement
     {
@@ -273,7 +290,7 @@ public class AlgorithmiaScript : MonoBehaviour
     }
 
 #pragma warning disable 414
-    private readonly string TwitchHelpMessage = @"Use !{0} move ULDR to move in those directions.";
+    private readonly string TwitchHelpMessage = @"Use !{0} move ULDR to move in those directions. Use !{0} colorblind to toggle colorblind.";
 #pragma warning restore 414
 
     IEnumerator Press(KMSelectable btn, float waitTime)
@@ -291,29 +308,37 @@ public class AlgorithmiaScript : MonoBehaviour
     IEnumerator ProcessTwitchCommand(string command)
     {
         command = command.Trim().ToUpperInvariant();
-        Match m = Regex.Match(command, @"^MOVE\s+([ULDR]+)$");
-        if (m.Success)
+        if (command.EqualsAny("COLORBLIND", "COLOURBLIND", "COLOR-BLIND", "COLOUR-BLIND", "CB"))
         {
-            Debug.Log(m.Groups[1].Value);
-            int pos = currentPos;
-            List<Dir> presses = new List<Dir>();
-            foreach (char ch in m.Groups[1].Value)
-            {
-                Dir d = dirLookup[ch];
-                if (Data.GetMovements(pos).ContainsKey(d))
-                {
-                    pos = Data.GetMovements(pos)[d];
-                    presses.Add(d);
-                }
-                else
-                {
-                    yield return "sendtochaterror Command left bounds of maze, command aborted.";
-                    yield break;
-                }
-            }
             yield return null;
-            foreach (Dir d in presses)
-                yield return Press(dirButtons[(int)d], 0.1f);
+            ToggleCB();
+        }
+        else
+        {
+            Match m = Regex.Match(command, @"^MOVE\s+([ULDR]+)$");
+            if (m.Success)
+            {
+                Debug.Log(m.Groups[1].Value);
+                int pos = currentPos;
+                List<Dir> presses = new List<Dir>();
+                foreach (char ch in m.Groups[1].Value)
+                {
+                    Dir d = dirLookup[ch];
+                    if (Data.GetMovements(pos).ContainsKey(d))
+                    {
+                        pos = Data.GetMovements(pos)[d];
+                        presses.Add(d);
+                    }
+                    else
+                    {
+                        yield return "sendtochaterror Command left bounds of maze, command aborted.";
+                        yield break;
+                    }
+                }
+                yield return null;
+                foreach (Dir d in presses)
+                    yield return Press(dirButtons[(int)d], 0.1f);
+            }
         }
     }
 
