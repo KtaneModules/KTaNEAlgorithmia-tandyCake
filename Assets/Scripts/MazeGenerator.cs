@@ -101,7 +101,7 @@ public class MazeGenerator
             Log("The selected edge connects from {0} to {1}.", Data.coords[newCell], Data.coords[backCell]);
             Carve(newCell, backCell);
         } while (visited.Count != 16);
-        Log("All cells visited. Aborting algorithm");
+        Log("All cells visited. Aborting algorithm.");
         Debug.Log(maze.Join());
     }
     public void RecursiveBacktracker()
